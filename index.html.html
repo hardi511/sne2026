@@ -1182,7 +1182,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
       var b=el("span","adm-st",LBL[st(r)]||st(r));b.setAttribute("data-s",st(r));
       t.appendChild(l);t.appendChild(b);c.appendChild(t);
       var m=el("div","adm-meta");
-      [["مۆبایل",r.phone],["ئیمەیڵ",r.email],["شار",r.city],["سیفەت",r.role],["دەزگا",r.org],["کار",r.title],["LinkedIn",r.linkedin],["بوارەکان",r.interests],["پێداویستی",r.access]].forEach(function(p){
+      [["مۆبایل",r.phone],["ئیمەیڵ",r.email],["شار",r.city],["سیفەت",r.role],["دەزگا",r.org],["کار",r.title],["LinkedIn",String(r.linkedin||"").split("?")[0].split("#")[0]],["بوارەکان",r.interests],["پێداویستی",r.access]].forEach(function(p){
         if(!p[1])return;var d=el("div");d.appendChild(el("span","k",p[0]+": "));d.appendChild(el("span",null,p[1]));m.appendChild(d);
       });
       c.appendChild(m);
