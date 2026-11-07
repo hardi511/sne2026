@@ -696,11 +696,24 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   Array.prototype.forEach.call(document.querySelectorAll('.ph[data-img]'),function(e){setImg(e,e.getAttribute('data-img'))});
 })();
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 (function(){
-  /* Paste the Google Apps Script Web App URL here (ends with /exec). */
-  var SHEETS_URL="";
+  /* Firebase: paste your web-app config here (Firebase Console > Project settings > Your apps).
+     While apiKey is empty the form works in demo mode and nothing is sent. */
+  var FIREBASE_CONFIG={apiKey:"AIzaSyBYBK5nhjr3I7EyqHadm2mnyDGsScVuEww",authDomain:"sne20262.firebaseapp.com",projectId:"sne20262",storageBucket:"sne20262.firebasestorage.app",messagingSenderId:"487418364255",appId:"1:487418364255:web:6fb973b83623aa816e76ea"};
+  var db=null;
+  try{if(FIREBASE_CONFIG.apiKey&&window.firebase){firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore()}}catch(e){db=null}
+  var ONLINE=!!db;
+  function lookup(id,name){
+    return db.collection("registrations").doc(String(id||"")).get().then(function(sn){
+      if(!sn.exists)return {found:false};
+      var d=sn.data();
+      return {found:true,match:!name||d.name===name,status:d.status||"Pending"};
+    });
+  }
   /* Leave empty on GitHub Pages: the current page address is used inside the QR. */
   var SITE_URL="";
   var KEY="sne26-ticket";
@@ -785,8 +798,8 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     var u=makeQR(t.text),img=$("qrImg");
     if(u){img.src=u;img.hidden=false}else{img.hidden=true}
     setStatus(t.status);
-    var dt=$("doneT");dt.textContent="";var d1=document.createElement("span");d1.textContent=SHEETS_URL?"داواکارییەکەت نێردرا":"زانیارییەکانت ئامادەکرا";var d2=document.createElement("span");d2.textContent=" · "+t.name;dt.appendChild(d1);dt.appendChild(d2);i18nApply(dt);
-    $("refresh").hidden=!SHEETS_URL;$("doneNote").hidden=!!SHEETS_URL;$("refErr").hidden=true;
+    var dt=$("doneT");dt.textContent="";var d1=document.createElement("span");d1.textContent=ONLINE?"داواکارییەکەت نێردرا":"زانیارییەکانت ئامادەکرا";var d2=document.createElement("span");d2.textContent=" · "+t.name;dt.appendChild(d1);dt.appendChild(d2);i18nApply(dt);
+    $("refresh").hidden=!ONLINE;$("doneNote").hidden=ONLINE;$("refErr").hidden=true;
     go(3,quiet);
   }
 
@@ -802,12 +815,13 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
       interests:pick('#chips [aria-pressed="true"]'),goals:pick("#opts input:checked",true),
       linkedin:$("f-in").value.trim(),access:$("f-acc").value.trim(),source:$("f-src").value
     };
-    var t={id:data.id,name:data.name,text:qrText(data),status:SHEETS_URL?"pending":"local"};
+    var t={id:data.id,name:data.name,text:qrText(data),status:ONLINE?"pending":"local"};
     var btn=form.querySelector('button[type="submit"]');
     $("sendErr").hidden=true;
-    if(!SHEETS_URL){showTicket(t);return}
+    if(!ONLINE){showTicket(t);return}
     btn.disabled=true;btn.textContent=T("دەنێردرێت...");
-    fetch(SHEETS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(data)}).then(function(){
+    var rec=Object.assign({},data,{status:"Pending",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    db.collection("registrations").doc(data.id).set(rec).then(function(){
       btn.disabled=false;btn.textContent=T("ناردنی داواکاری");showTicket(t);
     },function(){
       btn.disabled=false;btn.textContent=T("ناردنی داواکاری");$("sendErr").hidden=false;
@@ -815,9 +829,9 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   });
 
   $("refresh").addEventListener("click",function(){
-    if(!SHEETS_URL||!ticket)return;
+    if(!ONLINE||!ticket)return;
     var b=$("refresh");b.disabled=true;$("refErr").hidden=true;
-    fetch(SHEETS_URL+"?id="+encodeURIComponent(ticket.id)).then(function(r){return r.json()}).then(function(j){
+    lookup(ticket.id).then(function(j){
       var m={"Approved":"approved","Rejected":"rejected","Checked-in":"checked"};
       setStatus(m[j.status]||"pending");
     }).catch(function(){$("refErr").hidden=false}).then(function(){b.disabled=false});
@@ -867,8 +881,8 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     $("site").hidden=true;$("vw").hidden=false;i18nApply($("vw"));window.scrollTo(0,0);
     var b=$("vBadge");
     function badge(txt,s){b.textContent=txt;b.setAttribute("data-s",s);i18nApply(b)}
-    if(!SHEETS_URL){badge("تەنها نموونە • Not verified","local");return}
-    fetch(SHEETS_URL+"?id="+encodeURIComponent(p.i||"")+"&name="+encodeURIComponent(p.n||"")).then(function(r){return r.json()}).then(function(j){
+    if(!ONLINE){badge("تەنها نموونە • Not verified","local");return}
+    lookup(p.i,p.n).then(function(j){
       if(!j.found){badge("لە داتابەیس نەدۆزرایەوە","bad");return}
       if(!j.match){badge("زانیارییەکان یەک ناگرنەوە","bad");return}
       var st=j.status;
