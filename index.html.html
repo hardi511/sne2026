@@ -722,9 +722,11 @@ html.l-en .field .hint,html.l-en small{letter-spacing:0}
       <p class="adm-err" id="admErr" hidden></p>
     </div>
     <div id="admMain" hidden>
+      <p id="admInfo" style="margin:0 0 10px;font-size:13px;color:#5a5670;direction:ltr;text-align:right"></p>
+      <p class="adm-err" id="admErr2" hidden style="margin:0 0 12px;white-space:pre-line"></p>
       <div class="adm-stats" id="admStats"></div>
       <div class="adm-bar">
-        <input class="in" id="admQ" type="search" placeholder="گەڕان: ناو، مۆبایل، ئیمەیڵ، کۆد...">
+        <input class="in" id="admQ" name="adm-filter-q" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="گەڕان: ناو، مۆبایل، ئیمەیڵ، کۆد...">
         <select class="in" id="admF"><option value="">هەموو دۆخەکان</option><option value="Pending">چاوەڕێ</option><option value="Approved">پەسەندکراو</option><option value="Rejected">ڕەتکراوە</option><option value="Checked-in">هاتووەتە ژوورەوە</option></select>
         <button class="adm-btn" id="admBulk" type="button">ئیمەیڵ بۆ هەموو لیستەکە</button>
         <button class="adm-btn" id="admRef" type="button">نوێکردنەوە</button>
@@ -1114,12 +1116,14 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     var b="https://www.gstatic.com/firebasejs/10.12.5/";
     return Promise.all([import(b+"firebase-app.js"),import(b+"firebase-firestore.js"),import(b+"firebase-auth.js")]).then(function(m){
       var A=m[0],F=m[1],U=m[2],C=window.SNE_FB.cfg;
-      var app=A.getApps().length?A.getApp():A.initializeApp(C);
+      var ex=A.getApps().filter(function(a){return a.name==="adm"})[0];
+      var app=ex||A.initializeApp(C,"adm");
+      auth=U.getAuth(app);
       try{fs=F.initializeFirestore(app,{experimentalForceLongPolling:true},window.SNE_FB.db)}catch(e){fs=F.getFirestore(app,window.SNE_FB.db)}
-      auth=U.getAuth(app);M={F:F,U:U};return M;
+      M={F:F,U:U};return M;
     });
   }
-  function err(t){var e=$("admErr");e.hidden=!t;e.textContent=t||""}
+  function err(t){["admErr","admErr2"].forEach(function(id){var e=$(id);e.hidden=!t;e.textContent=t||""})}
   function isAdmin(u){return !!(u&&u.email&&u.emailVerified&&ADMINS.indexOf(u.email.toLowerCase())>=0)}
   load().then(function(m){
     m.U.onAuthStateChanged(auth,function(u){
@@ -1149,8 +1153,8 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     F.getDocs(F.collection(fs,"registrations")).then(function(snap){
       rows=[];snap.forEach(function(d){var x=d.data();x._id=d.id;rows.push(x)});
       rows.sort(function(a,b){return String(b.time||"").localeCompare(String(a.time||""))});
-      err("");draw();
-    }).catch(function(e){err((e&&e.code==="permission-denied")?"ڕێگەپێدان نییە: یاساکانی Firestore ڕێکبخە (بڕوانە ڕێنماییەکە).":"هەڵە لە هێنانی داتا: "+String(e&&(e.code||e.message)||e).slice(0,120))});
+      err("");$("admInfo").textContent="Loaded "+rows.length+" registrations · db: "+window.SNE_FB.db+" · "+(auth.currentUser&&auth.currentUser.email||"");draw();
+    }).catch(function(e){$("admInfo").textContent="";err((e&&e.code==="permission-denied")?"ڕێگەپێدان نییە (permission-denied): یاساکانی Firestore نوێ نەکراونەتەوە یان ئەم ئیمەیڵە تێیدا نییە: "+((auth&&auth.currentUser&&auth.currentUser.email)||"")+"\nFirestore > Rules ی نوێ Publish بکە.":"هەڵە لە هێنانی داتا: "+String(e&&(e.code||e.message)||e).slice(0,120))});
   }
   function st(r){return r.status||"Pending"}
   function shown(){
@@ -1190,6 +1194,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
       c.appendChild(a);L.appendChild(c);
     });
   }
+  $("admQ").value="";setTimeout(function(){$("admQ").value=""},400);
   $("admQ").addEventListener("input",draw);$("admF").addEventListener("change",draw);
   function setSt(r,v,bt){
     bt.disabled=true;
