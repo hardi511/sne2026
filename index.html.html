@@ -697,27 +697,30 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   Array.prototype.forEach.call(document.querySelectorAll('.ph[data-img]'),function(e){setImg(e,e.getAttribute('data-img'))});
 })();
 </script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 (function(){
   /* Firebase: paste your web-app config here (Firebase Console > Project settings > Your apps).
      While apiKey is empty the form works in demo mode and nothing is sent. */
   var FIREBASE_CONFIG={apiKey:"AIzaSyBYBK5nhjr3I7EyqHadm2mnyDGsScVuEww",authDomain:"sne20262.firebaseapp.com",projectId:"sne20262",storageBucket:"sne20262.firebasestorage.app",messagingSenderId:"487418364255",appId:"1:487418364255:web:6fb973b83623aa816e76ea"};
+  /* Firestore database ID — must match the name shown in Firebase Console > Firestore (dropdown at top). */
+  var FIRESTORE_DB="default";
+  window.SNE_FIREBASE_CONFIG=FIREBASE_CONFIG;window.SNE_FIRESTORE_DB=FIRESTORE_DB;
   var db=null,INIT_ERR="";
   function initDb(){
     if(db)return true;
     if(!FIREBASE_CONFIG.apiKey)return false;
-    if(!window.firebase||!firebase.firestore){INIT_ERR="Firebase SDK not loaded (check connection / ad-blocker)";return false}
-    try{
-      if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
-      var d=firebase.firestore();
-      try{d.settings({experimentalForceLongPolling:true})}catch(e2){}
-      db=d;INIT_ERR="";return true;
-    }catch(e){db=null;INIT_ERR="Firebase init error: "+((e&&(e.code||e.message))||e);return false}
+    if(window.SNE_FS){db=window.SNE_FS.db;INIT_ERR="";return true}
+    INIT_ERR=window.SNE_FS_ERR?("Firebase init error: "+window.SNE_FS_ERR):"Firebase SDK not loaded (check connection / ad-blocker)";
+    return false;
   }
-  initDb();
+  function waitDb(){
+    return new Promise(function(res){
+      if(initDb()||!FIREBASE_CONFIG.apiKey||window.SNE_FS_ERR){res(initDb());return}
+      var done=false;function f(){if(done)return;done=true;res(initDb())}
+      window.addEventListener("sne-fs-ready",f);setTimeout(f,15000);
+    });
+  }
   var ONLINE=!!db||!!FIREBASE_CONFIG.apiKey;
   function lookup(id,name){
     return db.collection("registrations").doc(String(id||"")).get().then(function(sn){
@@ -830,14 +833,16 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     var t={id:data.id,name:data.name,text:qrText(data),status:ONLINE?"pending":"local"};
     var btn=form.querySelector('button[type="submit"]');
     $("sendErr").hidden=true;
-    if(FIREBASE_CONFIG.apiKey&&!initDb()){
+    if(!ONLINE){showTicket(t);return}
+    btn.disabled=true;btn.textContent=T("دەنێردرێت...");
+    waitDb().then(function(ok){
+    if(!ok){
+      btn.disabled=false;btn.textContent=T("ناردنی داواکاری");
       var se0=$("sendErr");se0.hidden=false;
       var c0=document.getElementById("sendCode");if(!c0){c0=document.createElement("small");c0.id="sendCode";c0.style.cssText="display:block;direction:ltr;margin-top:6px;opacity:.8";se0.appendChild(c0)}
       c0.textContent=INIT_ERR||"Firebase not ready";return;
     }
-    if(!ONLINE){showTicket(t);return}
-    btn.disabled=true;btn.textContent=T("دەنێردرێت...");
-    var rec=Object.assign({},data,{status:"Pending",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    var rec=Object.assign({},data,{status:"Pending",createdAt:window.SNE_FS.serverTimestamp()});
     Promise.race([db.collection("registrations").doc(data.id).set(rec),new Promise(function(_,rj){setTimeout(function(){rj({code:"timeout",message:"No response from Firebase after 15s (network blocked, or Firestore database not reachable)"})},15000)})]).then(function(){
       btn.disabled=false;btn.textContent=T("ناردنی داواکاری");showTicket(t);
     },function(err){
@@ -847,12 +852,13 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
       var c=document.getElementById("sendCode");if(!c){c=document.createElement("small");c.id="sendCode";c.style.cssText="display:block;direction:ltr;margin-top:6px;opacity:.8";se.appendChild(c)}
       c.textContent=((err&&err.code)||"error")+(err&&err.message?" — "+String(err.message).slice(0,140):"");
     });
+    });
   });
 
   $("refresh").addEventListener("click",function(){
-    if(!ONLINE||!ticket||!initDb())return;
+    if(!ONLINE||!ticket)return;
     var b=$("refresh");b.disabled=true;$("refErr").hidden=true;
-    lookup(ticket.id).then(function(j){
+    waitDb().then(function(ok){if(!ok)throw 0;return lookup(ticket.id)}).then(function(j){
       var m={"Approved":"approved","Rejected":"rejected","Checked-in":"checked"};
       setStatus(m[j.status]||"pending");
     }).catch(function(){$("refErr").hidden=false}).then(function(){b.disabled=false});
@@ -902,8 +908,9 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     $("site").hidden=true;$("vw").hidden=false;i18nApply($("vw"));window.scrollTo(0,0);
     var b=$("vBadge");
     function badge(txt,s){b.textContent=txt;b.setAttribute("data-s",s);i18nApply(b)}
-    if(!ONLINE||!initDb()){badge("تەنها نموونە • Not verified","local");return}
-    lookup(p.i,p.n).then(function(j){
+    if(!ONLINE){badge("تەنها نموونە • Not verified","local");return}
+    waitDb().then(function(ok){if(!ok)return {local:true};return lookup(p.i,p.n)}).then(function(j){
+      if(j.local){badge("تەنها نموونە • Not verified","local");return}
       if(!j.found){badge("لە داتابەیس نەدۆزرایەوە","bad");return}
       if(!j.match){badge("زانیارییەکان یەک ناگرنەوە","bad");return}
       var st=j.status;
@@ -919,6 +926,23 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   }catch(e){}
   try{var saved=JSON.parse(localStorage.getItem(KEY)||"null");if(saved&&saved.id&&saved.text)showTicket(saved,true)}catch(e){}
 })();
+</script>
+<script type="module">
+import {initializeApp,getApps,getApp} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {initializeFirestore,doc,getDoc,setDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+try{
+  const cfg=window.SNE_FIREBASE_CONFIG;
+  if(cfg&&cfg.apiKey){
+    const app=getApps().length?getApp():initializeApp(cfg);
+    const fs=initializeFirestore(app,{experimentalForceLongPolling:true},window.SNE_FIRESTORE_DB||"(default)");
+    const ref=(c,id)=>doc(fs,c,String(id));
+    window.SNE_FS={serverTimestamp,db:{collection:c=>({doc:id=>({
+      get:()=>getDoc(ref(c,id)).then(sn=>({exists:sn.exists(),data:()=>sn.data()})),
+      set:d=>setDoc(ref(c,id),d)
+    })})}};
+  }
+}catch(e){window.SNE_FS_ERR=String((e&&(e.code||e.message))||e)}
+window.dispatchEvent(new Event("sne-fs-ready"));
 </script>
 <script>
 (function(){
