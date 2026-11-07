@@ -1133,7 +1133,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   }).catch(function(e){err("Firebase بار نەبوو: "+String(e&&e.message||e).slice(0,120))});
   $("admIn").addEventListener("click",function(){
     denied="";err("");
-    load().then(function(m){var p=new m.U.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});return m.U.signInWithPopup(auth,p)})
+    load().then(function(m){var p=new m.U.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account",login_hint:ADMINS[0]});return m.U.signInWithPopup(auth,p)})
     .catch(function(e){err("چوونەژوورەوە سەرکەوتوو نەبوو: "+String(e&&(e.code||e.message)||e).slice(0,120))});
   });
   $("admOut").addEventListener("click",function(){M&&M.U.signOut(auth)});
@@ -1223,6 +1223,18 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     var u="https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(ADMINS[0])+"&bcc="+encodeURIComponent(to.join(","));
     if(u.length>7000){err("لیستەکە زۆر درێژە. بە فلتەر یان گەڕان کەمی بکەرەوە.");return}
     err("");window.open(u,"_blank","noopener");
+  });
+})();
+</script>
+<script>
+/* secret entrance: tap the footer logo 3 times to open the admin room */
+(function(){
+  var lb=document.querySelector("footer .logo-box");if(!lb)return;
+  lb.style.touchAction="manipulation";lb.style.webkitUserSelect="none";lb.style.userSelect="none";lb.style.cursor="default";
+  var n=0,t=0;
+  lb.addEventListener("click",function(e){
+    var now=Date.now();n=(now-t<1200)?n+1:1;t=now;
+    if(n>=3){n=0;location.href=location.pathname+"?admin"}
   });
 })();
 </script>
