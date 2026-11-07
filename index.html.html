@@ -818,13 +818,22 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     var t={id:data.id,name:data.name,text:qrText(data),status:ONLINE?"pending":"local"};
     var btn=form.querySelector('button[type="submit"]');
     $("sendErr").hidden=true;
+    if(!ONLINE&&FIREBASE_CONFIG.apiKey){
+      var se0=$("sendErr");se0.hidden=false;
+      var c0=document.getElementById("sendCode");if(!c0){c0=document.createElement("small");c0.id="sendCode";c0.style.cssText="display:block;direction:ltr;margin-top:6px;opacity:.8";se0.appendChild(c0)}
+      c0.textContent="Firebase SDK not loaded (check connection / ad-blocker)";return;
+    }
     if(!ONLINE){showTicket(t);return}
     btn.disabled=true;btn.textContent=T("دەنێردرێت...");
     var rec=Object.assign({},data,{status:"Pending",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     db.collection("registrations").doc(data.id).set(rec).then(function(){
       btn.disabled=false;btn.textContent=T("ناردنی داواکاری");showTicket(t);
-    },function(){
-      btn.disabled=false;btn.textContent=T("ناردنی داواکاری");$("sendErr").hidden=false;
+    },function(err){
+      try{console.error(err)}catch(e){}
+      btn.disabled=false;btn.textContent=T("ناردنی داواکاری");
+      var se=$("sendErr");se.hidden=false;se.setAttribute("data-code",(err&&err.code)||"");
+      var c=document.getElementById("sendCode");if(!c){c=document.createElement("small");c.id="sendCode";c.style.cssText="display:block;direction:ltr;margin-top:6px;opacity:.8";se.appendChild(c)}
+      c.textContent=((err&&err.code)||"error")+(err&&err.message?" — "+String(err.message).slice(0,140):"");
     });
   });
 
