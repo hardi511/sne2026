@@ -924,7 +924,14 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   /* sends the ticket email; auto=true when called right after registration */
   function sendTicketMail(auto){
     if(!ticket||!ticket.email)return;
-    if(!EMAILJS.serviceId||!EMAILJS.templateId||!EMAILJS.publicKey){if(!auto)mailMsg("ناردنی ئیمەیڵ هێشتا ڕێکنەخراوە.");return}
+    if(!EMAILJS.serviceId||!EMAILJS.templateId||!EMAILJS.publicKey){
+      /* EmailJS not configured: open the mail app with the email already written */
+      if(auto)return;
+      var sub="SNE 2026 — "+T("باجی ئامادەبوون")+" "+ticket.id;
+      var body=ticket.name+"\n"+ticket.id+"\n14 NOV 2026 · Sulaymaniyah\n\n"+ticket.text;
+      location.href="mailto:"+encodeURIComponent(ticket.email).replace("%40","@")+"?subject="+encodeURIComponent(sub)+"&body="+encodeURIComponent(body);
+      return;
+    }
     var b=$("mailTk"),old=b.textContent;b.disabled=true;b.textContent=T("دەنێردرێت بۆ ئیمەیڵ...");
     fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
       service_id:EMAILJS.serviceId,template_id:EMAILJS.templateId,user_id:EMAILJS.publicKey,
