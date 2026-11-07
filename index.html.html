@@ -1,4 +1,5 @@
 <title>SNE 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@500;700;800&family=Vazirmatn:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -278,6 +279,111 @@ footer .tz{font-family:var(--f-mono);color:#7d6ab0;margin-top:24px;direction:ltr
 @media (prefers-reduced-motion:no-preference){.card,.btn{transition:transform .2s,filter .2s}.card:hover{transform:translateY(-3px)}}
 [dir="ltr"] select.in{background-position:right 14px center;padding-left:16px;padding-right:44px}
 html.l-en .field .hint,html.l-en small{letter-spacing:0}
+
+/* ===== Mobile size (phones) ===== */
+@media (max-width:640px){
+  body{font-size:15px;line-height:1.75;-webkit-text-size-adjust:100%}
+  section{padding-block:36px}
+  .wrap{padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+  .btn{width:100%;font-size:16px;padding:13px 20px}
+  .actions .btn{flex:1 1 100%}
+  /* header */
+  .top .wrap{padding-block:10px;gap:8px}
+  .brand{gap:8px;min-width:0}
+  .brand b{font-size:18px}
+  .hlogo{width:64px}
+  .logochip{padding:6px 8px;border-radius:12px}
+  .logochip img{width:56px}
+  .tools{gap:6px}
+  .lang{padding:3px;border-radius:12px}
+  .lang button{padding:5px 8px;font-size:12px}
+  .menu .ico{width:26px;height:26px}
+  /* hero */
+  .hero{padding-block:22px 4px}
+  .gew{gap:10px}
+  .gew .badge{padding:8px 12px;border-radius:14px}
+  .gew .badge img{height:40px}
+  .gew .ring{width:36px;height:36px}
+  .gew .ring::after{width:23px;height:23px}
+  .gew-note{padding:10px 14px;font-size:14px;border-radius:14px}
+  .hero h1{font-size:30px;margin-block:14px 4px}
+  .hero h2{font-size:19px;margin-bottom:14px}
+  .hero .lead{padding:16px 18px;border-radius:18px;font-size:15px}
+  .tags{gap:10px 16px;font-size:15px;margin-block:16px}
+  .reg{gap:20px;padding-bottom:36px}
+  /* slider */
+  .slider{border-radius:22px}
+  .slide{aspect-ratio:4/3.2}
+  .cap{right:14px;left:14px;bottom:14px}
+  .cap h3{font-size:18px}
+  .chip.logo-chip img{height:36px}
+  .thumbs{padding:10px 12px;gap:8px}
+  .thumbs button{width:52px;height:40px}
+  .facts{padding:14px;gap:10px}
+  .fact{padding:12px 14px;flex-wrap:wrap;gap:4px 12px}
+  .slider .btn{margin:0 14px 14px;width:calc(100% - 28px)}
+  .notice{padding:14px 16px;font-size:14px;border-radius:16px}
+  .info-row{padding:12px 14px;gap:12px}
+  .info-row .ib{width:46px;height:46px}
+  .info-row strong{font-size:16px}
+  /* section heads + cards */
+  .head{margin-bottom:24px;gap:10px}
+  .head h2{font-size:26px}
+  .cards{gap:16px}
+  .card{border-radius:20px}
+  .card .body{padding:16px 18px}
+  .card h3{font-size:18px}
+  .card p{font-size:14px}
+  .ihead{padding:16px 16px 0}
+  /* venue */
+  .venue-grid{gap:20px}
+  .venue-copy h2{font-size:26px}
+  .panel{padding:18px;border-radius:22px}
+  .tiles{gap:14px}
+  .tile{border-radius:20px;aspect-ratio:4/3}
+  .tile .txt{inset:auto 16px 16px 16px}
+  .tile h3{font-size:19px}
+  /* gallery */
+  .filters{gap:8px;margin-bottom:20px}
+  .filters button{padding:8px 16px;font-size:14px}
+  /* faq */
+  .faq{gap:10px}
+  details{border-radius:16px}
+  summary{padding:16px 18px;font-size:15px}
+  details .ans{padding:12px 18px 18px;font-size:14px}
+  /* form */
+  .formcard{border-radius:22px;padding:20px 14px}
+  .steps{gap:6px}
+  .steps li{font-size:12px;gap:6px;flex-direction:column;text-align:center}
+  .steps .dot{width:28px;height:28px}
+  .chips button{padding:10px 14px;font-size:14px}
+  .sum{padding:14px 16px}
+  .sum div{font-size:14px}
+  .ticket{width:100%}
+  .tk-qr img{width:200px;height:200px}
+  /* verification view */
+  .vw{padding-block:20px 36px}
+  .vw-t{min-width:0;flex-basis:calc(100% - 70px)}
+  .vw-badge{margin-inline-start:auto}
+  .vw-card{padding:14px 16px;border-radius:18px}
+  /* cta + footer */
+  .cta{padding-block:48px}
+  .cta h2{font-size:25px}
+  .cta p{margin:14px auto 22px}
+  footer{padding-block:40px 28px}
+  .fhead{gap:12px}
+  .fhead h3{font-size:19px}
+  .fhead small{font-size:15px}
+  .logo-box{width:84px}
+  footer h4{font-size:17px;margin:26px 0 10px}
+  footer ul a{font-size:16px}
+  footer hr{margin:30px 0 22px}
+}
+@media (max-width:380px){
+  .brand b{font-size:16px}
+  .hero h1{font-size:27px}
+  .lang button{padding:5px 6px;font-size:11px}
+}
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
