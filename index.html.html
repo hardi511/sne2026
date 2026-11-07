@@ -418,7 +418,7 @@ html.l-en .field .hint,html.l-en small{letter-spacing:0}
 
 <style>
 /* admin room (open with ?admin) */
-.adm{min-height:100vh;background:#f6f2fd;color:var(--ink);padding:20px 0 60px}
+.adm{overflow-x:hidden;max-width:100vw;min-height:100vh;background:#f6f2fd;color:var(--ink);padding:20px 0 60px}
 .adm-in{max-width:980px;margin-inline:auto;padding:0 max(14px,env(safe-area-inset-left,0px))}
 .adm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--brand-deep);color:#fff;border-radius:20px;padding:16px 20px;margin-bottom:16px}
 .adm-head h2{font-size:22px}.adm-head p{font-size:13px;color:var(--band-soft);direction:ltr;text-align:right}
@@ -1103,7 +1103,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
 /* admin room: open the site with ?admin  (e.g. https://your-site/?admin) */
 (function(){
   if(!/[?&]admin(=|&|$)/.test(location.search))return;
-  var ADMINS=["aliomaarr@gmail.com","hardio489@gmail.com"];
+  var ADMINS=["aliomaarr@gmail.com","ali.omaarr@gmail.com","hardio489@gmail.com"];
   var $=function(i){return document.getElementById(i)};
   var LBL={"Pending":"چاوەڕێ","Approved":"پەسەندکراو","Rejected":"ڕەتکراوە","Checked-in":"هاتووەتە ژوورەوە"};
   $("site").hidden=true;$("adm").hidden=false;document.title="SNE 2026 — Admin";
@@ -1134,7 +1134,13 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   $("admIn").addEventListener("click",function(){
     denied="";err("");
     load().then(function(m){var p=new m.U.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account",login_hint:ADMINS[0]});return m.U.signInWithPopup(auth,p)})
-    .catch(function(e){err("چوونەژوورەوە سەرکەوتوو نەبوو: "+String(e&&(e.code||e.message)||e).slice(0,120))});
+    .catch(function(e){
+      var c=String(e&&(e.code||e.message)||e);
+      if(c.indexOf("unauthorized-domain")>=0){
+        err("ئەم domain ە لە Firebase ڕێگەپێدراو نییە. ئەمە لە Firebase > Authentication > Settings > Authorized domains زیاد بکە:\n"+location.hostname);
+        $("admErr").style.whiteSpace="pre-line";
+      }else err("چوونەژوورەوە سەرکەوتوو نەبوو: "+c.slice(0,120));
+    });
   });
   $("admOut").addEventListener("click",function(){M&&M.U.signOut(auth)});
   $("admRef").addEventListener("click",fetchAll);
