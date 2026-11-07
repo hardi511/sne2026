@@ -89,6 +89,18 @@ select.in{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 .done .ib svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .note2{font-size:13px;color:var(--ink-soft);background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:14px;padding:10px 14px;color:var(--warn-ink)}
 @media (max-width:560px){.opts{grid-template-columns:1fr}.formcard{padding:22px 16px}}
+/* ticket */
+.ticket{width:min(100%,340px);background:#fff;border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:0 18px 40px -22px rgba(82,32,154,.5);display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:20px;text-align:center}
+.tk-top{width:100%;background:#241049;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;font-family:var(--f-display)}
+.tk-top b{font-size:20px;font-weight:800}
+.tk-qr{padding:18px 18px 4px}
+.tk-qr img{width:220px;height:220px;max-width:100%;image-rendering:pixelated;display:block}
+.tk-id{font-size:20px;color:var(--brand);direction:ltr}
+.tk-status{border-radius:999px;padding:4px 16px;font-size:14px;font-weight:700;background:#fdf3d0;color:#6b5210}
+.tk-status[data-s="approved"]{background:#d9f3e6;color:#17623f}
+.tk-status[data-s="rejected"]{background:#fbdcdf;color:#8e1b25}
+.tk-status[data-s="local"]{background:#eceaf4;color:#5a5670}
+.tk-help{font-size:14px;color:var(--ink-soft);max-width:420px}
 /* header */
 .top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--surface);z-index:10}
@@ -424,10 +436,22 @@ footer .tz{font-family:var(--f-mono);color:#7d6ab0;margin-top:24px;direction:ltr
       </div>
 
       <div id="s3" class="done" hidden>
-        <span class="ib"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
         <h3 id="doneT">زانیارییەکانت ئامادەکرا</h3>
-        <p id="doneP" style="color:var(--ink-soft)">دوای پێداچوونەوەی تیمی ڕێکخەر، ئاگاداری بڕیارەکە دەکرێیتەوە.</p>
-        <p class="note2" id="doneNote">تێبینی: ئەم فۆرمە هێشتا بە Google Sheets ەوە نەبەستراوەتەوە، بۆیە زانیارییەکان نەنێردراون.</p>
+        <div class="ticket" id="ticket">
+          <div class="tk-top"><b>SNE 2026</b><span>باجی ئامادەبوون</span></div>
+          <div class="tk-qr"><img id="qrImg" alt="QR" width="220" height="220"></div>
+          <div class="tk-id mono" id="tkId"></div>
+          <strong id="tkName" style="font-family:var(--f-display)"></strong>
+          <span class="tk-status" id="tkStatus" data-s="pending">بەپێداچوونەوەدایە</span>
+        </div>
+        <p class="tk-help" id="doneP">ئەم کۆدە لە دەروازە نیشانی تیمی ڕێکخەر بدە. باجەکە دوای ئەوە بەکاردێت کە ئەدمین داواکارییەکەت پەسەند بکات.</p>
+        <p class="err" id="refErr" hidden>نەتوانرا دۆخەکە بپشکنرێت. دووبارە هەوڵبدەرەوە.</p>
+        <p class="note2" id="doneNote" hidden>تێبینی: ئەم فۆرمە هێشتا بە Google Sheets ەوە نەبەستراوەتەوە، بۆیە زانیارییەکان نەنێردراون.</p>
+        <div class="actions" style="justify-content:center">
+          <button class="btn" type="button" id="saveTk">هەڵگرتنی وێنەی باج</button>
+          <button class="btn ghost" type="button" id="refresh">نوێکردنەوەی دۆخ</button>
+          <button class="btn ghost" type="button" id="again">تۆمارکردنی کەسێکی تر</button>
+        </div>
       </div>
     </form>
   </div>
@@ -514,16 +538,20 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   });
 })();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 (function(){
   /* Paste the Google Apps Script Web App URL here (ends with /exec). */
   var SHEETS_URL="";
+  var KEY="sne26-ticket";
   var $=function(i){return document.getElementById(i)};
   var s1=$("s1"),s2=$("s2"),s3=$("s3"),steps=$("steps").children,form=$("regForm");
-  function go(n){
+  var ticket=null;
+
+  function go(n,quiet){
     s1.hidden=n!==1;s2.hidden=n!==2;s3.hidden=n!==3;
     for(var i=0;i<steps.length;i++){if(i===(n===3?1:n-1))steps[i].setAttribute("aria-current","step");else steps[i].removeAttribute("aria-current")}
-    form.scrollIntoView({block:"start"});
+    if(!quiet)form.scrollIntoView({block:"start"});
   }
   function bad(field,on){field.classList.toggle("bad",on);var e=field.querySelector(".err");if(e)e.hidden=!on}
   function validate(){
@@ -559,29 +587,105 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   });
   $("back").addEventListener("click",function(){go(1)});
   $("f-agree").addEventListener("change",function(){$("agreeErr").hidden=true});
+
+  /* ---- ticket ---- */
+  function newId(){
+    var c="ABCDEFGHJKMNPQRSTUVWXYZ23456789",s="",a=new Uint8Array(6);
+    try{crypto.getRandomValues(a)}catch(e){}
+    for(var i=0;i<6;i++)s+=c.charAt((a[i]||Math.floor(Math.random()*256))%c.length);
+    return "SNE26-"+s;
+  }
+  function qrText(d){
+    return ["SNE 2026","ID: "+d.id,"Name: "+d.name,"Phone: "+d.phone,"Email: "+d.email,"City: "+d.city,"Role: "+d.role,d.org?"Org: "+d.org:""].filter(Boolean).join("\n");
+  }
+  function makeQR(text){
+    try{
+      if(typeof qrcode==="undefined")return "";
+      qrcode.stringToBytes=function(s){var e=unescape(encodeURIComponent(s)),b=[];for(var i=0;i<e.length;i++)b.push(e.charCodeAt(i));return b};
+      var q=qrcode(0,"M");q.addData(text,"Byte");q.make();
+      return q.createDataURL(8,4);
+    }catch(e){return ""}
+  }
+  var STATUS={pending:["بەپێداچوونەوەدایە","pending"],approved:["پەسەندکرا","approved"],rejected:["ڕەتکرایەوە","rejected"],checked:["هاتووەتە ژوورەوە","approved"],local:["نموونە (نەنێردراوە)","local"]};
+  function persist(){try{localStorage.setItem(KEY,JSON.stringify(ticket))}catch(e){}}
+  function setStatus(k){
+    var s=STATUS[k]||STATUS.pending,el=$("tkStatus");
+    el.textContent=s[0];el.setAttribute("data-s",s[1]);
+    if(ticket){ticket.status=k;persist()}
+  }
+  function showTicket(t,quiet){
+    ticket=t;
+    $("tkId").textContent=t.id;$("tkName").textContent=t.name;
+    var u=makeQR(t.text),img=$("qrImg");
+    if(u){img.src=u;img.hidden=false}else{img.hidden=true}
+    setStatus(t.status);
+    $("doneT").textContent=SHEETS_URL?("داواکارییەکەت نێردرا، "+t.name):("زانیارییەکانت ئامادەکرا، "+t.name);
+    $("refresh").hidden=!SHEETS_URL;$("doneNote").hidden=!!SHEETS_URL;$("refErr").hidden=true;
+    go(3,quiet);
+  }
+
   form.addEventListener("submit",function(e){
     e.preventDefault();
     if(s2.hidden)return;
     if(!$("f-agree").checked){$("agreeErr").hidden=false;return}
-    var pick=function(sel,attr){return Array.prototype.map.call(document.querySelectorAll(sel),function(x){return attr?x.value:x.textContent}).join(" | ")};
+    var pick=function(sel,val){return Array.prototype.map.call(document.querySelectorAll(sel),function(x){return val?x.value:x.textContent}).join(" | ")};
     var data={
-      time:new Date().toISOString(),
+      id:newId(),time:new Date().toISOString(),
       name:$("f-name").value.trim(),phone:$("f-phone").value.trim(),email:$("f-email").value.trim(),
       city:$("f-city").value,role:$("f-role").value,org:$("f-org").value.trim(),title:$("f-title").value.trim(),
       interests:pick('#chips [aria-pressed="true"]'),goals:pick("#opts input:checked",true),
       linkedin:$("f-in").value.trim(),access:$("f-acc").value.trim(),source:$("f-src").value
     };
-    var t=$("doneT"),p=$("doneP"),n=$("doneNote"),btn=form.querySelector('button[type="submit"]');
+    var t={id:data.id,name:data.name,text:qrText(data),status:SHEETS_URL?"pending":"local"};
+    var btn=form.querySelector('button[type="submit"]');
     $("sendErr").hidden=true;
-    if(!SHEETS_URL){
-      t.textContent="زانیارییەکانت ئامادەکرا، "+data.name;n.hidden=false;go(3);return;
-    }
+    if(!SHEETS_URL){showTicket(t);return}
     btn.disabled=true;btn.textContent="دەنێردرێت...";
     fetch(SHEETS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(data)}).then(function(){
-      t.textContent="داواکارییەکەت نێردرا، "+data.name;n.hidden=true;btn.disabled=false;btn.textContent="ناردنی داواکاری";go(3);
+      btn.disabled=false;btn.textContent="ناردنی داواکاری";showTicket(t);
     },function(){
       btn.disabled=false;btn.textContent="ناردنی داواکاری";$("sendErr").hidden=false;
     });
   });
+
+  $("refresh").addEventListener("click",function(){
+    if(!SHEETS_URL||!ticket)return;
+    var b=$("refresh");b.disabled=true;$("refErr").hidden=true;
+    fetch(SHEETS_URL+"?id="+encodeURIComponent(ticket.id)).then(function(r){return r.json()}).then(function(j){
+      var m={"Approved":"approved","Rejected":"rejected","Checked-in":"checked"};
+      setStatus(m[j.status]||"pending");
+    }).catch(function(){$("refErr").hidden=false}).then(function(){b.disabled=false});
+  });
+
+  $("saveTk").addEventListener("click",function(){
+    if(!ticket)return;
+    try{
+      var c=document.createElement("canvas");c.width=900;c.height=1200;
+      var x=c.getContext("2d");
+      x.fillStyle="#ffffff";x.fillRect(0,0,900,1200);
+      x.fillStyle="#241049";x.fillRect(0,0,900,180);
+      x.textAlign="center";x.fillStyle="#ffffff";
+      x.font="800 68px 'Noto Kufi Arabic',sans-serif";x.fillText("SNE 2026",450,100);
+      x.direction="rtl";x.font="500 32px 'Noto Kufi Arabic',sans-serif";x.fillText("باجی ئامادەبوون",450,152);
+      var img=$("qrImg");
+      if(!img.hidden){x.imageSmoothingEnabled=false;x.drawImage(img,130,240,640,640)}
+      x.direction="ltr";x.fillStyle="#52209a";x.font="500 54px 'IBM Plex Mono',monospace";x.fillText(ticket.id,450,975);
+      x.direction="rtl";x.fillStyle="#241049";x.font="700 46px 'Noto Kufi Arabic',sans-serif";x.fillText(ticket.name,450,1050);
+      x.direction="ltr";x.fillStyle="#5a5670";x.font="500 30px 'Vazirmatn',sans-serif";x.fillText("14 NOV 2026 · Sulaymaniyah",450,1120);
+      var a=document.createElement("a");a.download=ticket.id+".png";a.href=c.toDataURL("image/png");
+      document.body.appendChild(a);a.click();a.remove();
+    }catch(err){}
+  });
+
+  $("again").addEventListener("click",function(){
+    try{localStorage.removeItem(KEY)}catch(e){}
+    ticket=null;form.reset();
+    Array.prototype.forEach.call(chips.children,function(b){b.setAttribute("aria-pressed","false")});
+    Array.prototype.forEach.call(document.querySelectorAll("#opts .opt"),function(o){o.classList.remove("on")});
+    $("f-agree").checked=false;
+    go(1);
+  });
+
+  try{var saved=JSON.parse(localStorage.getItem(KEY)||"null");if(saved&&saved.id&&saved.text)showTicket(saved,true)}catch(e){}
 })();
 </script>
