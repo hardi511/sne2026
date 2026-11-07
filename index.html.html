@@ -69,6 +69,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:url("data:ima
 .ltr{direction:ltr;text-align:left}
 .in:focus{outline:3px solid var(--line);border-color:var(--brand)}
 .field.bad .in{border-color:#e0323c}
+[hidden]{display:none!important}
 .err{color:#c2272f;font-size:13px}
 .chips{display:flex;flex-wrap:wrap;gap:10px}
 .chips button{border:1.5px solid transparent;background:#eef1f8;color:var(--ink);border-radius:14px;padding:12px 18px;font:inherit;font-size:15px;cursor:pointer}
@@ -705,7 +706,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
      While apiKey is empty the form works in demo mode and nothing is sent. */
   var FIREBASE_CONFIG={apiKey:"AIzaSyBYBK5nhjr3I7EyqHadm2mnyDGsScVuEww",authDomain:"sne20262.firebaseapp.com",projectId:"sne20262",storageBucket:"sne20262.firebasestorage.app",messagingSenderId:"487418364255",appId:"1:487418364255:web:6fb973b83623aa816e76ea"};
   var db=null;
-  try{if(FIREBASE_CONFIG.apiKey&&window.firebase){firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore()}}catch(e){db=null}
+  try{if(FIREBASE_CONFIG.apiKey&&window.firebase){firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();db.settings({experimentalForceLongPolling:true,merge:true})}}catch(e){db=null}
   var ONLINE=!!db;
   function lookup(id,name){
     return db.collection("registrations").doc(String(id||"")).get().then(function(sn){
@@ -826,7 +827,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     if(!ONLINE){showTicket(t);return}
     btn.disabled=true;btn.textContent=T("دەنێردرێت...");
     var rec=Object.assign({},data,{status:"Pending",createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    db.collection("registrations").doc(data.id).set(rec).then(function(){
+    Promise.race([db.collection("registrations").doc(data.id).set(rec),new Promise(function(_,rj){setTimeout(function(){rj({code:"timeout",message:"No response from Firebase after 15s (network blocked, or Firestore database not reachable)"})},15000)})]).then(function(){
       btn.disabled=false;btn.textContent=T("ناردنی داواکاری");showTicket(t);
     },function(err){
       try{console.error(err)}catch(e){}
