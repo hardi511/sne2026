@@ -617,9 +617,7 @@ html.l-en .field .hint,html.l-en small{letter-spacing:0}
         <p class="tk-help" id="doneP">ئەم کۆدە لە دەروازە نیشانی تیمی ڕێکخەر بدە. باجەکە دوای ئەوە بەکاردێت کە ئەدمین داواکارییەکەت پەسەند بکات.</p>
         <p class="err" id="refErr" hidden>نەتوانرا دۆخەکە بپشکنرێت. دووبارە هەوڵبدەرەوە.</p>
         <p class="note2" id="doneNote" hidden>تێبینی: ئەم فۆرمە هێشتا بە Google Sheets ەوە نەبەستراوەتەوە، بۆیە زانیارییەکان نەنێردراون.</p>
-        <p class="tk-help" id="mailMsg" hidden style="margin:12px 0 0;font-weight:600"></p>
         <div class="actions" style="justify-content:center">
-          <button class="btn" type="button" id="mailTk">ناردنی باج بۆ ئیمەیڵەکەم</button>
           <button class="btn ghost" type="button" id="saveTk">هەڵگرتنی وێنەی باج</button>
           <button class="btn ghost" type="button" id="refresh">نوێکردنەوەی دۆخ</button>
           <button class="btn ghost" type="button" id="again">تۆمارکردنی کەسێکی تر</button>
@@ -911,7 +909,6 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   }
   function showTicket(t,quiet){
     ticket=t;
-    var mb=document.getElementById("mailTk");if(mb){mb.hidden=!t.email;mb.disabled=!!t.mailed}
     $("tkId").textContent=t.id;$("tkName").textContent=t.name;
     var u=makeQR(t.text),img=$("qrImg");
     if(u){img.src=u;img.hidden=false}else{img.hidden=true}
@@ -991,36 +988,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   /* ---- email the ticket (EmailJS) ----
      Fill these from emailjs.com: Email Services > Service ID, Email Templates > Template ID, Account > Public Key. */
   var EMAILJS={serviceId:"",templateId:"",publicKey:"",mailTemplateId:""}; window.SNE_EMAILJS=EMAILJS; /* mailTemplateId: a template using {{subject}} and {{message}} for custom emails */
-  function mailMsg(txt,ok){var m=$("mailMsg");m.hidden=false;m.textContent=T(txt);m.style.color=ok?"#1f8a4c":"#c0392b";i18nApply(m)}
-  /* sends the ticket email; auto=true when called right after registration */
-  function sendTicketMail(auto){
-    if(!ticket||!ticket.email)return;
-    if(!EMAILJS.serviceId||!EMAILJS.templateId||!EMAILJS.publicKey){
-      /* EmailJS not configured: open the mail app with the email already written */
-      if(auto)return;
-      var sub="SNE 2026 — "+T("باجی ئامادەبوون")+" "+ticket.id;
-      var body=ticket.name+"\n"+ticket.id+"\n14 NOV 2026 · Sulaymaniyah\n\n"+ticket.text;
-      location.href="mailto:"+encodeURIComponent(ticket.email).replace("%40","@")+"?subject="+encodeURIComponent(sub)+"&body="+encodeURIComponent(body);
-      return;
-    }
-    var b=$("mailTk"),old=b.textContent;b.disabled=true;b.textContent=T("دەنێردرێت بۆ ئیمەیڵ...");
-    fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-      service_id:EMAILJS.serviceId,template_id:EMAILJS.templateId,user_id:EMAILJS.publicKey,
-      template_params:{to_email:ticket.email,to_name:ticket.name,ticket_id:ticket.id,ticket_link:ticket.text,event_date:"14 NOV 2026 · Sulaymaniyah"}
-    })}).then(function(r){
-      if(!r.ok)throw r;
-      b.textContent=old;mailMsg("باجەکەت نێردرا بۆ ئیمەیڵەکەت. سەیری Inbox و Spam بکە.",true);
-      ticket.mailed=true;persist();
-    }).catch(function(){b.disabled=false;b.textContent=old;mailMsg("ناردنی ئیمەیڵ سەرکەوتوو نەبوو. دووبارە هەوڵبدەرەوە.")});
-  }
-  $("mailTk").addEventListener("click",function(){
-    if(!ticket)return;
-    if(!ticket.email){mailMsg("ئیمەیڵێک بۆ ئەم باجە تۆمار نەکراوە.");return}
-    sendTicketMail(false);
-  });
-
   $("again").addEventListener("click",function(){
-    $("mailMsg").hidden=true;$("mailTk").disabled=false;
     try{localStorage.removeItem(KEY)}catch(e){}
     ticket=null;form.reset();
     Array.prototype.forEach.call(chips.children,function(b){b.setAttribute("aria-pressed","false")});
@@ -1135,7 +1103,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
 /* admin room: open the site with ?admin  (e.g. https://your-site/?admin) */
 (function(){
   if(!/[?&]admin(=|&|$)/.test(location.search))return;
-  var ADMIN="aliomaarr@gmail.com";
+  var ADMINS=["aliomaarr@gmail.com","hardio489@gmail.com"];
   var $=function(i){return document.getElementById(i)};
   var LBL={"Pending":"چاوەڕێ","Approved":"پەسەندکراو","Rejected":"ڕەتکراوە","Checked-in":"هاتووەتە ژوورەوە"};
   $("site").hidden=true;$("adm").hidden=false;document.title="SNE 2026 — Admin";
@@ -1152,7 +1120,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     });
   }
   function err(t){var e=$("admErr");e.hidden=!t;e.textContent=t||""}
-  function isAdmin(u){return !!(u&&u.email&&u.emailVerified&&u.email.toLowerCase()===ADMIN)}
+  function isAdmin(u){return !!(u&&u.email&&u.emailVerified&&ADMINS.indexOf(u.email.toLowerCase())>=0)}
   load().then(function(m){
     m.U.onAuthStateChanged(auth,function(u){
       if(u&&!isAdmin(u)){denied="ئەم هەژمارە ئەدمین نییە: "+u.email;m.U.signOut(auth);return}
@@ -1165,7 +1133,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
   }).catch(function(e){err("Firebase بار نەبوو: "+String(e&&e.message||e).slice(0,120))});
   $("admIn").addEventListener("click",function(){
     denied="";err("");
-    load().then(function(m){var p=new m.U.GoogleAuthProvider();p.setCustomParameters({login_hint:ADMIN});return m.U.signInWithPopup(auth,p)})
+    load().then(function(m){var p=new m.U.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});return m.U.signInWithPopup(auth,p)})
     .catch(function(e){err("چوونەژوورەوە سەرکەوتوو نەبوو: "+String(e&&(e.code||e.message)||e).slice(0,120))});
   });
   $("admOut").addEventListener("click",function(){M&&M.U.signOut(auth)});
@@ -1252,7 +1220,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     var seen={},to=[];
     shown().forEach(function(r){var e=(r.email||"").trim();if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)&&!seen[e.toLowerCase()]){seen[e.toLowerCase()]=1;to.push(e)}});
     if(!to.length){err("هیچ ئیمەیڵێک لە لیستەکەدا نییە.");return}
-    var u="https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(ADMIN)+"&bcc="+encodeURIComponent(to.join(","));
+    var u="https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(ADMINS[0])+"&bcc="+encodeURIComponent(to.join(","));
     if(u.length>7000){err("لیستەکە زۆر درێژە. بە فلتەر یان گەڕان کەمی بکەرەوە.");return}
     err("");window.open(u,"_blank","noopener");
   });
