@@ -428,6 +428,7 @@ html.l-en .field .hint,html.l-en small{letter-spacing:0}
 .adm-btn.ok{background:#e4f5ec;border-color:#b5e0c8;color:#17623f}
 .adm-btn.no{background:#fdeceb;border-color:#f3c3c0;color:#a12a22}
 .adm-btn:disabled{opacity:.5}
+.adm-btn.del{background:#a12a22;border-color:#a12a22;color:#fff}
 .adm-err{color:#c0392b;font-weight:600}
 .adm-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
 .adm-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;text-align:center}
@@ -728,6 +729,7 @@ html.l-en .field .hint,html.l-en small{letter-spacing:0}
       <div class="adm-bar">
         <input class="in" id="admQ" name="adm-filter-q" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="گەڕان: ناو، مۆبایل، ئیمەیڵ، کۆد...">
         <select class="in" id="admF"><option value="">هەموو دۆخەکان</option><option value="Pending">چاوەڕێ</option><option value="Approved">پەسەندکراو</option><option value="Rejected">ڕەتکراوە</option><option value="Checked-in">هاتووەتە ژوورەوە</option></select>
+        <button class="adm-btn del" id="admDelRej" type="button">سڕینەوەی هەموو ڕەتکراوەکان</button>
         <button class="adm-btn" id="admBulk" type="button">ئیمەیڵ بۆ هەموو لیستەکە</button>
         <button class="adm-btn" id="admRef" type="button">نوێکردنەوە</button>
       </div>
@@ -1191,6 +1193,7 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
       });
       var em=el("button","adm-btn pri","ناردنی ئیمەیڵ");em.type="button";em.disabled=!r.email;em.addEventListener("click",function(){openMail(r)});a.appendChild(em);
       if(r.phone){var ca=el("a","adm-btn","پەیوەندی");ca.href="tel:"+String(r.phone).replace(/[^\d+]/g,"");ca.style.textDecoration="none";a.appendChild(ca)}
+      if(st(r)==="Rejected"){var dl=el("button","adm-btn del","سڕینەوە");dl.type="button";dl.addEventListener("click",function(){delReg(r,dl)});a.appendChild(dl)}
       c.appendChild(a);L.appendChild(c);
     });
   }
@@ -1201,6 +1204,21 @@ function setImg(el,k){if(!ASSETS[k])return;el.style.setProperty('--img','url('+A
     M.F.updateDoc(M.F.doc(fs,"registrations",r._id),{status:v}).then(function(){r.status=v;draw()})
     .catch(function(e){bt.disabled=false;err("نوێکردنەوەی دۆخ سەرکەوتوو نەبوو: "+String(e&&(e.code||e.message)||e).slice(0,100))});
   }
+  function delReg(r,bt){
+    if(!confirm("دڵنیایت دەتەوێت ئەم تۆمارە بسڕیتەوە؟\n"+(r.name||"")+" ("+r._id+")\nگەڕانەوەی نییە."))return;
+    bt.disabled=true;
+    M.F.deleteDoc(M.F.doc(fs,"registrations",r._id)).then(function(){rows=rows.filter(function(x){return x._id!==r._id});err("");draw()})
+    .catch(function(e){bt.disabled=false;err("سڕینەوە سەرکەوتوو نەبوو: "+String(e&&(e.code||e.message)||e).slice(0,100))});
+  }
+  $("admDelRej").addEventListener("click",function(){
+    var list=rows.filter(function(r){return st(r)==="Rejected"});
+    if(!list.length){err("هیچ تۆمارێکی ڕەتکراوە نییە.");return}
+    if(!confirm("دڵنیایت دەتەوێت "+list.length+" تۆماری ڕەتکراوە بسڕیتەوە؟\nگەڕانەوەی نییە."))return;
+    var b=$("admDelRej");b.disabled=true;
+    Promise.all(list.map(function(r){return M.F.deleteDoc(M.F.doc(fs,"registrations",r._id)).then(function(){return r._id})}))
+    .then(function(ids){rows=rows.filter(function(x){return ids.indexOf(x._id)<0});b.disabled=false;err("");draw()})
+    .catch(function(e){b.disabled=false;err("سڕینەوە سەرکەوتوو نەبوو: "+String(e&&(e.code||e.message)||e).slice(0,100));fetchAll()});
+  });
   /* ---- email ---- */
   function mNote(t,ok){var m=$("mMsg");m.hidden=!t;m.textContent=t||"";m.style.color=ok?"#1f8a4c":"#c0392b"}
   function openMail(r){cur=r;$("mTo").value=r.email;$("mSub").value="";$("mBody").value="";mNote("");$("admMod").hidden=false;$("mSub").focus()}
